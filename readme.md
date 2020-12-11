@@ -2,7 +2,7 @@
 
 https://www.udemy.com/course/understanding-typescript-jp/
 
-## ブラウザの監視用のライブラリ
+## デコレーターファクトリーブラウザの監視用のライブラリ
 
 ```
 npm i -D lite-server
@@ -387,3 +387,382 @@ interface Named {
 ```
 
 # 高度な型
+
+## 交差型
+
+型同士を`&`で結合してどちらも持っている型を定義することができる。
+
+## 型ガード（type ガード）
+
+ユニオン型とかの場合、上の方で typeof などで型を調べて条件を分ければ、その下では型が正確に推論さえ
+
+## 型キャスト
+
+```
+const userInputElement = <HTMLInputElement>document.getElementById('user-input')!;
+userInputElement.value = 'テキスト';
+```
+
+or
+
+```
+const userInputElement = document.getElementById('user-input')! as HTMLInputElement;
+userInputElement.value = 'テキスト';
+
+or
+
+const userInputElement = document.getElementById('user-input');
+(userInputElement as HTMLInputElement).value = 'テキスト';
+
+```
+
+React などは JSX で<>が使えないことがあるので後者が良い  
+書き方が違うだけで同じこと
+
+## インデックス型
+
+オブジェクトのプロパティが決まってええいない場合に使う  
+`[prop: string]`でキー名がストリングであり、どんなキー名で数がどれだけあるかを指定することができる。
+
+```
+interface ErrorContainer {
+  [prop: string]: string;
+}
+
+const errorBag: ErroContainer {
+  email: '正しいメールアドレスではありません',
+  userName: 'ユーザー名は記号を含めることはできません',
+}
+```
+
+## 関数オーバーロード
+
+ユニオン型を引数に持つ関数の戻り値はユニオン型になってしまうので、その先の処理で影響がでる
+
+```
+function add(a: number | string, b: number | string) {
+  if (typeof a === 'string' || typeof b === 'string') {
+    return a.toString() + b.toString();
+  }
+  return a + b;
+}
+
+const result = add('hello', 'typescript');
+result.split(' '); // エラーになる（文字列だと判断できないので）
+```
+
+関数の上に引数が渡された時のパターンを用意しておくとこれが解決できる。  
+コンパイル後は削除される。
+
+```
+function add(a: number, b: number): number;
+function add(a: string, b: string): string;
+function add(a: number | string, b: number | string) {
+  if (typeof a === 'string' || typeof b === 'string') {
+    return a.toString() + b.toString();
+  }
+  return a + b;
+}
+
+const result = add('hello', 'typescript');
+result.split(' ');
+```
+
+## オプショナルチェイン
+
+DB や json からデータを取得した際にネストされたオブジェクトの存在か確認できないことがある。  
+そういう時には`?`をつけると良い  
+存在しない時にアクセスしなくなる
+
+```
+const data = {
+  id: 'aaa',
+  name: 'user',
+  job: {
+    title: 'aaa',
+  }
+}
+
+console.log(data?.job?.title)
+```
+
+## null 合体演算子
+
+変数が null だった場合の処理
+
+null か undefined の場合に実行する
+`||`の場合は falsy なものでも実行されてしまうので、`0`や`空`はそのまま許可したい場合にはこっちを使う
+
+```
+const userInput = '';
+const storedData = userInput ?? 'DEFAULT';
+```
+
+# ジェネリック型（汎用型）
+
+Array, Promise などもジェネリクス型。  
+追加の型情報をわたすもの
+
+## 独自のジェネリック型
+
+関数の引数の型を汎用的に使う時にこうやって書く  
+T から始まるのが慣例で続けて T,U,V,W...と続ける
+
+```
+function merge<T, U>(objA: T, objB: U) {
+  return Object.assign(objA, objB);
+}
+
+const mObj = merge({ name: 'Max' }, { age: 15 })
+mObj.name; // これが推論できるようになる
+```
+
+## 制約
+
+`extends`をつけると制約ができる  
+以下の場合は中身は何でもいいけどオブジェクトであることだけは制約がある
+
+```
+function merge<T extends object, U extends object>(objA: T, objB: U) {
+  return Object.assign(objA, objB);
+}
+
+const mObj = merge({ name: 'Max' }, { age: 15 })
+mObj.name; // これが推論できるようになる
+```
+
+こんな感じにするとどんな方でもいいけど length があるオブジェクトであることだけの制約をつけています
+
+```
+interface Lengty {
+  length: number;
+}
+
+function countAndDescribe<T extends Lengty>(element: T): [T, string] {
+  let descriptionText = 'not value';
+  if (element.length > 0) {
+    descriptionText = element.length.toString();
+  }
+  return [element, descriptionText];
+}
+
+console.log(countAndDescribe('aaaaa'))
+```
+
+### keyof でオブジェクトの中にキーがあるかどうかを制約で追加する
+
+```
+function extractAndConvert<T extends object, U extends keyof T>(obj: T, key: U) {
+  return obj[key];
+}
+
+extractAndConvert({ name: 'taro' }, 'name');
+```
+
+## ジェネリッククラス
+
+```
+class Data<T extends string | number | boolean> {
+  private data: T[] = []
+
+  addItem (item: T) {
+    this.data.push(item)
+  }
+
+  removeItem (item: T) {
+    this.data.splice(this.data.indexOf(item), 1)
+  }
+
+  getItems() {
+    return [...this.data]
+  }
+}
+
+const textStorage = new Data<string>();
+textStorage.addItem('test')
+// textStorage.addItem(1111) //error
+
+const numberStorage = new Data<number>();
+numberStorage.addItem(123);
+// numberStorage.addItem('text') //error
+```
+
+## 組み込みのユーティリティ型
+
+他にもあるけど例えば以下の２つ
+
+### Partial
+
+オブジェクトをオプショナルにする　　
+最後にキャストして返す
+
+```
+let obj: Partial<AAAA> = {}
+
+...
+
+return obj as AAAA;
+```
+
+### readondy
+
+変更ができなくする
+
+```
+const names: Readonly<string[]> = [1, 2, 3];
+names.push(4); // error
+```
+
+# デコレータ
+
+メタプログラミングに役立つもの  
+開発者向けのツールとかで役に立つかも
+
+設定は以下にする
+
+```
+"target": "es2015",
+"experimentalDecorators": true,
+```
+
+## クラスのデコレータ
+
+クラスが定義されたタイミング実行される
+インスタンスかの時ではない
+
+```
+function Logger(target: Function) {
+  console.log('ログ出力中')
+  console.log(target)
+}
+
+@Logger
+class Person1 {
+  name = "max"
+
+  constructor() {
+    console.log('aaaa')
+  }
+}
+
+const pers = new Person1();
+console.log(pers)
+```
+
+## デコレーターファクトリー
+
+関数を返す関数をデコレータにする
+
+```
+function Logger(logString: string) {
+  return function(constructor: Function) {
+    console.log(constructor)
+  }
+}
+
+@Logger('ログ出力中')
+class Person1 {
+  name = "max"
+
+  constructor() {
+    console.log('aaaa')
+  }
+}
+
+const pers = new Person1();
+console.log(pers)
+```
+
+## 便利なデコレーター
+
+```
+function WithTemplate(template: string, hookId: string) {
+  return function(_: Function) {
+    const hookEl = document.getElementById(hookId);
+    if (hookEl) {
+      hookEl.innerHTML = template;
+    }
+  }
+}
+
+@WithTemplate('<h1>aaa</h1>', 'app')
+class Person1 {
+  name = "max"
+
+  constructor() {
+    console.log('aaaa')
+  }
+}
+
+const pers = new Person1();
+console.log(pers)
+```
+
+こんなこともできる。  
+Angular とかでよく使ってるらしい
+
+```
+function WithTemplate(template: string, hookId: string) {
+  return function(constructor: any) {
+    const hookEl = document.getElementById(hookId);
+    const p = new constructor();
+    if (hookEl) {
+      hookEl.innerHTML = template;
+      hookEl.querySelector('h1')!.textContent = p;
+    }
+  }
+}
+
+@WithTemplate('<h1>aaa</h1>', 'app')
+class Person1 {
+  name = "max"
+
+  constructor() {
+    console.log('aaaa')
+  }
+}
+
+const pers = new Person1();
+console.log(pers)
+```
+
+## 高度なデコレーター
+
+### プロパティのデコレータ
+
+これもインスタンス化ではなくクラス定義時じ実行される
+
+```
+function Log(target: any, propertyName: string | Symbol) {
+  console.log(target, propertyName);
+}
+
+class Product {
+  @Log
+  title: string;
+  private _price: number;
+
+  set price(val: number) {
+    if (val > 0) {
+    this._price = val;
+    } else {
+      throw new Error('aaa');
+    }
+  }
+
+  constructor(t: string, p: number) {
+    this.title = t
+    this._price = p
+  }
+
+  getPriceTax(tax: number) {
+    return this._price * (1 + tax)
+  }
+}
+```
+
+クラス、プロパティ、アクセサー、メソッド、引数（パラメータ）につけることができる
+
+# その他
+
+## 使っていない変数名は`_`にすると無視してくれる
