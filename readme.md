@@ -983,3 +983,61 @@ plugins: [
   "build": "webpack --config webpack.config.prod.js"
 },
 ```
+
+# サードパーティのライブラリの使い方
+
+## lodash, jquery などのライブラリ
+
+```
+npm i lodash
+```
+
+読み込んで使おうとすると TS でエラーになる
+
+```
+import _ from 'lodash';
+console.log(_.shuffle([1, 2, 3]));
+```
+
+lodash は TS で書かれていないので js しかないので使えない。  
+でもよくあるので TS で理解できるようにしてあげる
+
+### types
+
+`@types/lodash`などと調べると型定義が見つかるのでこれを読み込んで使う  
+https://www.npmjs.com/package/@types/lodash
+
+↓
+
+DefinitelyTyped という JS ようのライブラリの型定義をまとめてくれているリポジトリがある  
+https://github.com/DefinitelyTyped/DefinitelyTyped  
+処理などは書かれてないけど、引数と戻り値などをまとめてくれている
+
+これを使うタイミングとしては
+
+- TS で書かれていない js のライブラリ
+- JS のライブラリでもたまに型定義を用意してくれているモジュールがあるけどそうでない場合
+
+lodash や jQuery はこれらに当てはまる
+
+```
+npm i -D @types/lodash
+```
+
+### これでも型定義がない時は...
+
+`declare`を使う（アンビエント宣言と呼ぶ）  
+これで宣言した者は TS に必ず存在することを伝える。  
+index.html で定義されたグローバルの変数などを使う場合に使う
+
+```
+declare var GLOBAL: string;
+```
+
+### class-transformer
+
+オブジェクトをクラスに変換するライブラリ
+
+### class-varidate
+
+デコレーターを使ってバリデーション処理を簡単に作れるライブラリ
