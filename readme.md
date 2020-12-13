@@ -765,4 +765,221 @@ class Product {
 
 # その他
 
-## 使っていない変数名は`_`にすると無視してくれる
+- 使っていない変数名は`_`にすると無視してくれる
+- class の private メソッドは public の下に来るようにする（多分プロパティとかもそう）
+
+# namespace
+
+```
+namespace App {
+  export Draggable ...
+}
+```
+
+## トリプススラッシュ・ディレクティブ
+
+TS 独自の公文  
+path に設定したファイルに依存していることを明示して、コンパイル時に一緒に含めるようになる
+
+```
+/// <reference path="drag-drop-interfaces.ts" />
+
+App.Draggable
+```
+
+で使える。  
+同じ namespace はいくつも定義できるので、それぞれのファイルで同じネームスペースで囲めばいちいちオブジェクトのプロパティとして参照しなくてもいい
+
+```
+namespace App {
+  export A;
+}
+```
+
+```
+/// <reference path="drag-drop-interfaces.ts" />
+
+namespace App {
+  class B extends A {
+    ...
+  }
+}
+```
+
+みたいな感じ
+
+## tsconfig.js
+
+この二つの設定をすると referrence も一緒にバンドルしてコンパイルされる
+
+```
+"module": "amd"
+"outFile": "./dist/bundle.js"
+```
+
+## 問題点
+
+人力で依存関係を全てのファイルに書かないといけない（下層でも使っているものを全部書く）　　
+コンパイルエラーも出ず、実行してみないと分からず、この管理が大変なので ESModules をつかる（モダンブラウザのみ）
+
+# ES Modules
+
+ブラウザで使えるモジュール  
+ブラウザで実行するので拡張子は`.js`
+
+namespace よりはこっちがいい
+
+```
+import { Draggable, DragTarget } from '../models/drag-drop.js';
+```
+
+```
+"module": "es2015",
+// "outFile": "./dist/bundle.js"
+```
+
+## 処理の実行タイミング
+
+複数回 import されたとしてもはじめに import された１回目だけ実行される  
+他のところで import された時は実行後のものが返される
+
+## まとめ
+
+推奨は ESModule（新しいバージョンしか動かない）  
+TS のトリプススラッシュ・ディレクティブと namespace は壊れやすいのであまりよくない（古いのでも動く）
+
+# Webpack(バージョン 4)
+
+```
+npm i -D webpack webpack-cli webpack-dev-server typescript ts-loader
+```
+
+- webpack
+  - webpack 本体
+- webpack-cli
+  - webpack コマンドをプロジェクトを実行するためのもの
+- webpack-dev-server
+  - localhost を立ち上げる
+- typescript
+  - プロジェクト単位に ts をインストールしておく
+- ts-loader
+  - webpack で typescript をコンパイルするためのパッケージ
+
+## tsconfig.json
+
+```
+"target": "es5"
+"module": "es2015",
+// "rootDir": "src", // webpack側で設定するので
+```
+
+## webpack.config.js
+
+node.js で設定を書くことができる
+
+### entry
+
+起点となるファイル名
+
+### output
+
+#### filename
+
+出力名  
+`filename: 'bundle.[contenthash].js',`こんな感じで動的にも扱える（contenthash は毎回ランダムの値を入れてくれる webpack の機能)
+
+#### path
+
+tsconfig.json の`outDir`と揃えておく  
+絶対パスを入れるので`path`を使って`path: path.resolve(__dirname, 'dist')`みたいな感じ
+
+### module
+
+webpack が見つけたファイルに何をするかを決められる
+
+#### rules
+
+どの拡張子にどのルールを適応するかを決める  
+entry ファイルから走査して、import されているファイルなどをみていく時に、何にどの処理を実行するかを決める
+
+```
+{
+  test: /\.ts$/, // 拡張子.tsのファイルに...
+  use: 'ts-loader', // ts-loaderの処理を実行
+  exclude: /node_modules/ // node_modules配下は除外
+}
+```
+
+#### resolve
+
+import されたファイルをどうやって解決するか  
+import されたファイルはデフォルトでは.js になるので、.ts も探してもらえるように設定
+
+```
+resolve: {
+  extentions: ['.ts', '.js'],
+}
+```
+
+### sourcemap
+
+tsconfig の
+
+```
+"sourceMap": true,
+```
+
+webpack.config.js の
+
+```
+devtool: 'inline-source-map',
+```
+
+## webpack-dev-server
+
+```
+"start": "webpack-dev-server",
+```
+
+コンパイル後のファイルはメモリ上に保持するのでコンパイルされたファイルは書き出されない
+
+```
+output: {
+  publicPath: 'dist' // webpack-dev-serverをする際に読み込むファイルを設定できる
+}
+```
+
+## 本番用の設定を分ける
+
+`webpack.config.prod.js`という名前のファイルを別に用意する  
+これは webpack が判定できるものではないので、名前はなんでも良い
+
+### plugins
+
+ワークフロー全体に適応される追加の処理  
+module, rules はファイル単位
+
+```
+npm i -D clearn-webpack-plugin
+```
+
+```
+const CleanPlugin = require('clean-webpack-plugin')
+
+...
+
+plugins: [
+  new CleanPlugin.CleanWebpackPlugin(),
+]
+```
+
+### 実行
+
+`--config`で本番用のファイルを渡す
+
+```
+"scripts": {
+  "start": "webpack-dev-server",
+  "build": "webpack --config webpack.config.prod.js"
+},
+```
