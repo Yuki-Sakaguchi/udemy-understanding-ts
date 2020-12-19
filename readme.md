@@ -964,7 +964,7 @@ npm i -D clearn-webpack-plugin
 ```
 
 ```
-const CleanPlugin = require('clean-webpack-plugin')
+const CleanPlugin = requireだと補完が聞かないのでimport('clean-webpack-plugin')
 
 ...
 
@@ -1110,3 +1110,51 @@ export default TodoList;
 ## 困ったら型定義をみる
 
 React の組み込み関数の場合にはホバーすればコメントが見れるのでそれでかいけつできるはず
+
+# node + Express
+
+.ts を実行しようとすると実行できてしまう  
+node は拡張子にかかわらず js ファイルだと認識して実行してしまうから。
+ts の機能を使っていなければ実行にも成功するが、TS の機能があるともちろんエラーになる  
+必ずコンパイルすること
+
+## 設定
+
+```
+npm init -y
+tsc --init
+```
+
+tsconfig.json を変更する  
+node なので target は新しくできる  
+moduleResolution はモジュールが node で認識できるように入れておく
+
+```
+"target": "es2018",
+"module": "commonjs",
+"moduleResolution": "node",
+"outDir": "./dist",
+"rootDir": "./src",
+```
+
+body-parser はリクエストをパースする  
+nodemon はファイルの修正を監視してサーバーを更新してくれる
+
+```
+npm i -S express body-parser
+npm i -D nodemon
+```
+
+このままだと require などが使えないので`@types/node`を持ってくる
+
+```
+npm i -D @types/node @types/express
+```
+
+でも require だと補完が聞かないので import で書く  
+コンパイル後の形は require になるので実行は問題なし
+
+```
+// const express = require('express');
+import express from 'express';
+```
