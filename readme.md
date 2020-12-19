@@ -1041,3 +1041,72 @@ declare var GLOBAL: string;
 ### class-varidate
 
 デコレーターを使ってバリデーション処理を簡単に作れるライブラリ
+
+# React + TypeScript
+
+```
+npx create-react-app . --template typescript
+```
+
+## React の関数コンポーネント
+
+React には型定義が一緒に入っているのでそれを使える  
+`React.FC`は`React.FunctionComponent`と同じ  
+FunctionComponent は jsx を返す関数
+
+React.FC を使うなら`function構文`ではなくて`const test = () => {}`を使った方がいいらしい
+
+```
+import React from 'react';
+
+// function App() {
+//   return (
+//     <div className="App">
+
+//     </div>
+//   );
+// }
+
+const App: React.FC = () => {
+  return <div className="App"></div>
+}
+```
+
+## Props
+
+コンポーネントの props の型を決めてあげる  
+ジェネリック型で型を定義できる
+
+```
+import React from 'react';
+import TodoList from './components/TodoList';
+
+const App: React.FC = () => {
+  const todos = [{ id: 't1', text: 'TypeScriptコース完了' }];
+  return <div className="App">
+    <TodoList items={todos} />
+  </div>;
+};
+
+export default App;
+```
+
+```
+import React from 'react';
+
+interface TodoListProps {
+  items: {id: string, text: string}[];
+}
+
+const TodoList: React.FC<TodoListProps> = (props) => {
+  return <ul>
+    {props.items.map(todo => <li key={todo.id}>{todo.text}</li>)}
+  </ul>;
+};
+
+export default TodoList;
+```
+
+## 困ったら型定義をみる
+
+React の組み込み関数の場合にはホバーすればコメントが見れるのでそれでかいけつできるはず
